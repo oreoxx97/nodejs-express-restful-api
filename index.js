@@ -1,30 +1,67 @@
-var app = require('express')();
-var users = require('./component/users');
-var bodyParser = require('body-parser');
-var port = process.env.PORT || 7777;
-// parse application/json
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({
-	extended: true
-}));
-app.get('/', function (req, res) {
-	res.send('<h1>Hello Node.js</h1>');
-});
+const express = require('express')
+const app = express()
+const mongoose = require('mongoose')
+const Product = require('./models/product')
+app.use(express.json())
+mongoose.connect('mongodb://localhost:27017/Cats', { useNewUrlParser: true })
 
-app.get('/user', function (req, res) {
-	res.json(users.findAll());
-});
+// สร้าง database schema
+const Cat = mongoose.model('Cat', { name: String })
 
-app.get('/user/:id', function (req, res) {
-	var id = req.params.id;
-	res.json(users.findById(id));
-});
+// สร้าง instance จาก model
+const kitty = new Cat({ name: 'JavaScript' })
 
-app.post('/newuser', function (req, res) {
-	var json = req.body;
-	res.send('Add new ' + json.name + ' Completed!');
-});
+// save ลง database (return เป็น Promise)
+kitty.save().then(() => console.log('meow'))
 
-app.listen(port, function() {
-	console.log('Starting node.js on port ' + port);
-});
+// mock data
+const products = [{}]
+
+mongoose.connection.on('error', err => {
+    console.error('MongoDB error', err)
+  })
+
+app.post('/products', async (req, res) => {
+    const payload = req.body
+    const product = new Product(payload)
+    await product.save()
+    res.status(201).end()
+  })
+
+
+
+  
+  app.get('/products', (req, res) => {
+    res.json(products)
+  })
+  
+  app.get('/products/:id',async  (req, res) => {
+    const { id } = req.params
+  const product = await Product.findById(id)
+  res.json(product)
+  })
+  
+  app.post('/products', (req, res) => {
+    const payload = req.body
+    res.json(payload)
+  })
+  
+  app.put('/products/:id', async  (req, res) => {
+    const payload = req.body
+    const { id } = req.params
+  
+    const product = await Product.findByIdAndUpdate(id, { $set: payload })
+    res.json(product)
+  })
+  
+  app.delete('/products/:id',async (req, res) => {
+    const { id } = req.params
+
+    await Product.findByIdAndDelete(id)
+    res.status(204).end()
+  })
+
+
+app.listen(9000, () => {
+  console.log('Application is running on port 9000')
+})
